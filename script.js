@@ -2,7 +2,7 @@
 const GOOGLE_BACKEND_URL = "https://script.google.com/macros/s/AKfycby-vB9M6XkxTwdEs-rQSQRCaklkjvnsJoajX2wYrTBKPpsxU6zI18Qmw1e2pKcZ55Uluw/exec";
 
 // --- 2. BACKUP BACKEND (HUGGING FACE ROUTER API) ---
-// Base64 encoded to bypass GitHub Secret Scanning on static front-end deployments
+// Securely loaded from Vercel Environment Variables
 const HF_API_KEY = process.env.HUGGING_FACE_TOKEN; 
 
 // Load cached data on startup so users don't lose work on refresh
@@ -243,7 +243,7 @@ function checkShadowban() {
 function formatText() {
     const input = document.getElementById('inputText').value;
     if (!input.trim()) return alert("Please enter text first.");
-    const boldMap = { 'a':'𝗮', 'b':'𝗯', 'c':'𝗰', 'd':'𝗱', 'e':'𝗲', 'f':'𝗳', 'g':'𝗴', 'h':'𝗵', 'i':'𝗶', 'j':'𝗷', 'k':'𝗸', 'l':'𝗹', 'm':'𝗺', 'n':'𝗻', 'o':'𝗼', 'p':'𝗽', 'q':'𝗾', 'r':'𝗿', 's':'𝘀', 't':'𝘁', 'u':'𝘂', 'v':'𝘃', 'w':'𝘄', 'x':'𝘅', 'y':'𝘆', 'z':'𝘇', 'A':'𝗔', 'B':'𝗕', 'C':'𝗖', 'D':'𝗗', 'E':'𝗘', 'F':'𝗙', 'G':'𝗚', 'H':'𝗛', 'I':'𝗜', 'J':'𝗝', 'K':'𝗞', 'L':'𝗟', 'M':'𝗠', 'N':'𝗡', 'O':'𝗢', 'P':'𝗣', 'Q':'𝗤', 'R':'𝗥', 'S':'𝗦', 'T':'𝗧', 'U':'𝗨', 'V':'𝗩', 'W':'𝗪', 'X':'𝗫', 'Y':'𝗬', 'Z':'𝗭', '0':'𝟬', '1':'𝟭', '2':'𝟮', '3':'𝟯', '4':'𝟰', '5':'𝟱', '6':'𝟲', '7':'𝟳', '8':'𝟴', '9':'𝟵' };
+    const boldMap = { 'a':'𝗮', 'b':'𝗯', 'c':'𝗰', 'd':'𝗱', 'e':'𝗲', 'f':'𝗳', 'g':'𝗴', 'h':'𝗵', 'i':'𝗶', 'j':'𝗷', 'k':'𝗸', 'l':'𝗹', 'm':'𝗺', 'n':'𝗻', 'o':'𝗼', 'p':'𝗽', 'q':'𝗾', 'r':'𝗿', 's':'𝘀', 't':'𝘁', 'u':'𝘂', 'v':'𝘃', 'w':'𝘄', 'x':'𝘅', 'y':'𝘆', 'z':'𝘇', 'A':'𝗔', 'B':'𝗕', 'C':'𝗖', 'D':'𝗗', 'E':'𝗘', 'F':'𝗙', 'G':'𝗚', 'H':'𝗛', 'I':'𝗜', 'J':'𝗝', 'K':'𝗞', 'L':'𝗟', 'M':'𝗠', 'N':'𝗡', 'O':'𝗢', 'P':'𝗣', 'Q':'𝗤', 'R':'𝗥', 'S':'𝗦', 'T':'𝗧', 'U':'𝗨', 'V':'𝗩', 'W':'𝗪', 'X':'𝗫', 'Y':'𝗬', 'Z':'𝗭', '0':'𝟬', '1':'𝟭', '2':'𝟮', '3':'𝟯', '4':'𝟰', '5':'𝟱', '6':'𝟲', '7':'𝗳', '8':'𝟴', '9':'𝟵' };
     let formatted = '';
     for (let i = 0; i < input.length; i++) formatted += boldMap[input[i]] || input[i];
     document.getElementById('outputText').innerText = formatted + "\n\n.\n.\n.";
@@ -269,4 +269,4 @@ function copyText(elementId) {
     if (textToCopy.includes("appear here") || textToCopy.includes("Enter a") || textToCopy.includes("Oops!")) return alert("Generate valid text first!");
     
     navigator.clipboard.writeText(textToCopy).then(() => alert("Copied to clipboard!")).catch(() => alert("Could not copy."));
-        }
+                     }
