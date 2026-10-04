@@ -1,9 +1,5 @@
-// --- 1. PRIMARY BACKEND (GOOGLE GEMINI) ---
-const GOOGLE_BACKEND_URL = "https://script.google.com/macros/s/AKfycby-vB9M6XkxTwdEs-rQSQRCaklkjvnsJoajX2wYrTBKPpsxU6zI18Qmw1e2pKcZ55Uluw/exec";
-
-// --- 2. BACKUP BACKEND (HUGGING FACE ROUTER API) ---
-// Securely loaded from Vercel Environment Variables
-const HF_API_KEY = process.env.HUGGING_FACE_TOKEN; 
+// --- CENTRAL SECURE BACKEND URL ---
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwz-JN2H2goR8T7PbagKSnCnvPQd2mVdvHDsvfoQsWDR6uH7WCDdo5oBdGTq1vTOTqFXA/exec";
 
 // Load cached data on startup so users don't lose work on refresh
 window.onload = () => {
@@ -25,75 +21,25 @@ function switchPage(pageId, btnElement) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- AUTO-FALLBACK ROUTING ENGINE ---
-async function fetchFromBackend(prompt) {
-    // STEP 1: Try Primary Google Backend First
-    const googleController = new AbortController();
-    const googleTimeoutId = setTimeout(() => googleController.abort(), 12000); // 12-second timeout
-
+// --- SECURE BACKEND ROUTING ---
+async function fetchFromBackend(prompt, lang) {
     try {
-        console.log("Attempting Primary Google API...");
-        const googleResponse = await fetch(GOOGLE_BACKEND_URL, {
+        const response = await fetch(BACKEND_URL, {
             method: 'POST',
-            body: JSON.stringify({ prompt: prompt }),
-            redirect: 'follow',
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            signal: googleController.signal 
+            body: JSON.stringify({ prompt: prompt, lang: lang }),
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
         });
 
-        clearTimeout(googleTimeoutId); 
-        const data = await googleResponse.json();
-        
+        const data = await response.json();
         if (data.success) {
-            return data.text; // Success! Return Google's response.
+            return data.text;
         } else {
-            // Throw error to trigger the backup if quota is exceeded
-            throw new Error("Google API failed or quota exceeded.");
+            console.error("Backend Error:", data.error);
+            return null;
         }
     } catch (error) {
-        console.warn("Primary API failed. Switching to Hugging Face Backup...");
-        
-        // STEP 2: Primary Failed. Trigger Hugging Face Backup (OpenAI Compatible)
-        const hfController = new AbortController();
-        const hfTimeoutId = setTimeout(() => hfController.abort(), 20000); // 20-second timeout
-        
-        try {
-            const hfResponse = await fetch("https://router.huggingface.co/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${HF_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    model: "meta-llama/Llama-3.1-8B-Instruct", 
-                    messages: [
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: 800,
-                    temperature: 0.7
-                }),
-                signal: hfController.signal
-            });
-
-            clearTimeout(hfTimeoutId);
-            const hfData = await hfResponse.json();
-
-            // Check if Hugging Face threw an error
-            if (hfData.error) {
-                console.error("Hugging Face API Error:", hfData.error);
-                return null;
-            }
-
-            console.log("Successfully generated using Backup API!");
-            return hfData.choices[0].message.content.trim();
-
-        } catch (backupError) {
-            console.error("Both Primary and Backup APIs failed.", backupError.message);
-            return null; // Total failure, safe user warning is shown on the UI
-        }
+        console.error("Network or Fetch Failed:", error);
+        return null;
     }
 }
 
@@ -102,13 +48,10 @@ async function generateAI(type) {
     const btn = document.getElementById(`btn-${type}`);
     const loader = document.getElementById(`loader-${type}`);
     const textSpan = document.getElementById(`text-${type}`);
-    
-    // Get the selected language from the dropdown
     const lang = document.getElementById('outputLanguage').value;
     
     let outputDiv, topicInput;
 
-    // Connect variables to the correct HTML elements based on the tool clicked
     if (type === 'script') {
         outputDiv = document.getElementById('scriptOutput');
         topicInput = document.getElementById('scriptTopic').value;
@@ -143,13 +86,11 @@ async function generateAI(type) {
         return;
     }
     
-    // UI Loading State
     btn.disabled = true;
     loader.style.display = 'inline-block';
     textSpan.style.display = 'none';
     outputDiv.innerText = "Connecting to AI... Please wait.";
 
-    // Construct specific AI prompts
     let prompt = "";
     if (type === 'script') {
         prompt = `You are an expert short-form video scriptwriter. Write a completely ORIGINAL Instagram Reel/YouTube Short script strictly in ${lang} language on this topic: ${topicInput}. Rules: 1. Strong hook. 2. Natural pacing. 3. Short punchy sentences. 4. Practical insight. 5. Conversational tone. 6. No unnecessary emojis/headings. 7. 30 seconds max length. Output ONLY the final script in ${lang}.`;
@@ -179,21 +120,18 @@ async function generateAI(type) {
         prompt = `You are a YouTube algorithm expert. Write 5 highly clickable, high-CTR titles for a video about: ${topicInput}. Number them 1 to 5. Make them dramatic and compelling, but not clickbait. Write the titles in ${lang}.`;
     }
 
-    // Call the Auto-Fallback Engine
-    const aiResponse = await fetchFromBackend(prompt);
+    const aiResponse = await fetchFromBackend(prompt, lang);
 
-    // UI Restore State
     btn.disabled = false;
     loader.style.display = 'none';
     textSpan.style.display = 'inline-block';
     
-    // Check if both APIs failed
     if (!aiResponse) {
         outputDiv.innerHTML = `<span class="error-text">⚠️ Oops! Something went wrong while generating. Please try again.</span>`;
     } else {
         const cleanResponse = aiResponse.trim();
         outputDiv.innerText = cleanResponse;
-        localStorage.setItem(`cache_${type}`, cleanResponse); // Auto-save
+        localStorage.setItem(`cache_${type}`, cleanResponse);
     }
 }
 
@@ -227,7 +165,7 @@ function checkShadowban() {
 
     if (foundSpam > 0) {
         outputDiv.innerHTML = `
-            <div class="warning-header">⚠️ Found ${foundSpam} potential spam/engagement-bait words!</div>
+            <div class="warning-header">⚠️️ Found ${foundSpam} potential spam/engagement-bait words!</div>
             <p style="font-size: 0.9rem; margin-bottom: 10px;">The algorithm may restrict reach for the highlighted terms below. Try rephrasing them.</p>
             ${cleanHTML.replace(/\n/g, "<br>")}
         `;
@@ -260,7 +198,6 @@ function copyText(elementId) {
     const element = document.getElementById(elementId);
     let textToCopy = element.innerText;
     
-    // Prevent copying the shadowban warning text by mistake
     if (elementId === 'checkerOutput' && textToCopy.includes('⚠️')) {
          alert("Please fix the highlighted words before copying!");
          return;
@@ -269,4 +206,4 @@ function copyText(elementId) {
     if (textToCopy.includes("appear here") || textToCopy.includes("Enter a") || textToCopy.includes("Oops!")) return alert("Generate valid text first!");
     
     navigator.clipboard.writeText(textToCopy).then(() => alert("Copied to clipboard!")).catch(() => alert("Could not copy."));
-                     }
+}
